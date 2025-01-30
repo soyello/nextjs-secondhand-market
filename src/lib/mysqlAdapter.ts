@@ -25,14 +25,23 @@ const mySQLAdapter = {
     }
   },
   async createUser(
-    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role'>
+    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role' | 'createdAt' | 'updatedAt'>
   ): Promise<Omit<AdapterUser, 'hashedPassword'>> {
     const { name, email, hashedPassword } = user;
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO users (name, email, hashed_password) VALUES (?,?,?)',
       [name, email, hashedPassword]
     );
-    return { id: result.insertId.toString(), name, email, role: 'User', image: null, emailVerified: null };
+    return {
+      id: result.insertId.toString(),
+      name,
+      email,
+      role: 'User',
+      createdAt: new Date(),
+      updatedAt: null,
+      image: null,
+      emailVerified: null,
+    };
   },
   async updateUser(user: Nullable<AdapterUser> & { email: string }): Promise<AdapterUser> {
     const { email, name, image, role } = user;
