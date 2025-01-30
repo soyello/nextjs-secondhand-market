@@ -2,6 +2,7 @@ import { NextAuthOptions, User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import NextAuth from 'next-auth/next';
 import mySQLAdapter from '@/lib/mysqlAdapter';
+import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -13,32 +14,35 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const hardcodedUser = {
-          id: '곶감',
-          name: '정재연',
-          email: 'hello@good.com',
-          role: 'User',
-          hashedPassword: '12345',
-        };
-        if (!credentials) {
+        if (!credentials?.email || !credentials?.password) {
           console.warn('credentials must be required.');
-          throw new Error('crednetials must be required.');
+          return null;
         }
-        if (credentials.email === hardcodedUser.email && credentials.password === hardcodedUser.hashedPassword) {
-          return hardcodedUser as User;
-        }
+
         const user = await mySQLAdapter.getUser(credentials.email);
 
-        if (user && user.hashedPassword === credentials.password) {
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            hashedPassword: user.hashedPassword,
-          };
+        if (!user) {
+          console.warn('회원가입 이력이 없습니다.');
+          throw new Error('No user found with this email.');
         }
-        return null;
+        if (!user.hashedPassword) {
+          console.warn('비밀번호가 설정되지 않은 계정입니다.');
+          throw new Error('User does not have a password set.');
+        }
+
+        const isCorrectPassword = await bcrypt.compare(credentials.password, user.hashedPassword);
+
+        if (!isCorrectPassword) {
+          console.warn('비밀번호가 일치하지 않습니다.');
+          throw new Error('Incorrenct password.');
+        }
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        };
       },
     }),
   ],

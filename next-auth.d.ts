@@ -6,7 +6,7 @@ declare module 'next-auth' {
   }
   interface User {
     role: string;
-    hashedPassword: string | null;
+    hashedPassword?: string;
   }
   interface JWT {
     id: string;

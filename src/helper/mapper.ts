@@ -12,7 +12,7 @@ export const mapToAdapterUser = (row: UserRow): AdapterUser => ({
   name: row.name,
   email: row.email,
   image: row.image ?? null,
-  hashedPassword: row.hashed_password ?? null,
+  hashedPassword: row.hashed_password,
   emailVerified: row.email_verified ?? null,
   role: row.user_type,
 });

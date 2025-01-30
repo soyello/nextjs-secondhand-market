@@ -15,7 +15,7 @@ const mySQLAdapter = {
     }
     try {
       const [rows] = await pool.query<UserRow[]>(
-        'SELECT id, name, email, user_type, created_at, updated_at, hahsed_password FROM users WHERE email=?',
+        'SELECT id, name, email, user_type, created_at, updated_at, hashed_password FROM users WHERE email=?',
         [email]
       );
       return rows[0] ? mapToAdapterUser(rows[0]) : null;
@@ -25,7 +25,7 @@ const mySQLAdapter = {
     }
   },
   async createUser(
-    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'User'>
+    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role'>
   ): Promise<Omit<AdapterUser, 'hashedPassword'>> {
     const { name, email, hashedPassword } = user;
     const [result] = await pool.query<ResultSetHeader>(

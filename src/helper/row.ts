@@ -10,7 +10,7 @@ export interface UserRow extends BaseRow {
   name: string;
   email: string;
   image: string | null;
-  hashed_password: string | null;
+  hashed_password: string;
   email_verified: Date | null;
   user_type: string;
 }
