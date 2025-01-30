@@ -12,6 +12,7 @@ export interface UserRow extends BaseRow {
   image: string | null;
   hashed_password: string | null;
   email_verified: Date | null;
+  user_type: string;
 }
 
 export interface SessionRow extends RowDataPacket {

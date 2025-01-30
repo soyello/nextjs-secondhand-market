@@ -14,30 +14,33 @@ const mySQLAdapter = {
       throw new Error('Email must be provided.');
     }
     try {
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, hahsed_password FROM users WHERE email=?', [
-        email,
-      ]);
+      const [rows] = await pool.query<UserRow[]>(
+        'SELECT id, name, email, user_type, created_at, updated_at, hahsed_password FROM users WHERE email=?',
+        [email]
+      );
       return rows[0] ? mapToAdapterUser(rows[0]) : null;
     } catch (error) {
       console.error('Error fetching user by Email:', error);
       throw new Error('Failed fetch user.');
     }
   },
-  async createUser(user: Omit<AdapterUser, 'id' | 'emailVerified'>): Promise<Omit<AdapterUser, 'hashedPassword'>> {
+  async createUser(
+    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'User'>
+  ): Promise<Omit<AdapterUser, 'hashedPassword'>> {
     const { name, email, hashedPassword } = user;
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO users (name, email, hashed_password) VALUES (?,?,?)',
       [name, email, hashedPassword]
     );
-    return { id: result.insertId.toString(), name, email, image: null, emailVerified: null };
+    return { id: result.insertId.toString(), name, email, role: 'User', image: null, emailVerified: null };
   },
   async updateUser(user: Nullable<AdapterUser> & { email: string }): Promise<AdapterUser> {
-    const { email, name, image } = user;
+    const { email, name, image, role } = user;
     if (!email) {
       throw new Error('User Email is required for updating');
     }
     try {
-      const updates = { name, image };
+      const updates = { name, image, user_type: role };
       const keys = Object.keys(updates).filter((key) => updates[key as keyof typeof updates] !== undefined);
 
       if (keys.length === 0) {
@@ -50,7 +53,7 @@ const mySQLAdapter = {
       await pool.query(`UPDATE users SET ${fields} WHERE email=?`, [...values, email]);
 
       const [rows] = await pool.query<UserRow[]>(
-        'SELECT email, name, image, created_at, updated_at FROM users WHERE email=?',
+        'SELECT email, name, image, user_type, created_at, updated_at FROM users WHERE email=?',
         [email]
       );
       if (!rows[0]) {
@@ -77,6 +80,7 @@ const mySQLAdapter = {
           s.expires AS expires,
           u.id AS id,
           u.name AS name,
+          u.user_type AS user_type,
           u.image AS image,
           u.created_at AS created_at,
           u.updated_at AS updated_at,
@@ -164,3 +168,5 @@ const mySQLAdapter = {
     }
   },
 };
+
+export default mySQLAdapter;

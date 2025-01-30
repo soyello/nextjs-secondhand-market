@@ -1,28 +1,7 @@
-import { RowDataPacket } from 'mysql2';
 import { NextAuthOptions, User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import pool from '../../../lib/db';
 import NextAuth from 'next-auth/next';
-
-declare module 'next-auth' {
-  interface User {
-    id: string;
-    hashedPassword: string | null;
-  }
-  interface Session {
-    user: User;
-  }
-  interface JWT {
-    id: string;
-  }
-}
-
-interface UserRows extends RowDataPacket {
-  id: string;
-  name: string;
-  email: string;
-  hashed_password: string;
-}
+import mySQLAdapter from '@/lib/mysqlAdapter';
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -38,6 +17,7 @@ export const authOptions: NextAuthOptions = {
           id: '곶감',
           name: '정재연',
           email: 'hello@good.com',
+          role: 'User',
           hashedPassword: '12345',
         };
         if (!credentials) {
@@ -47,22 +27,25 @@ export const authOptions: NextAuthOptions = {
         if (credentials.email === hardcodedUser.email && credentials.password === hardcodedUser.hashedPassword) {
           return hardcodedUser as User;
         }
-        const [rows] = await pool.query<UserRows[]>('SELECT id, name, email FROM users WHERE email = ?', [
-          credentials.email,
-        ]);
-        const user = rows[0];
-        if (user && user.hashed_password === credentials.password) {
+        const user = await mySQLAdapter.getUser(credentials.email);
+
+        if (user && user.hashedPassword === credentials.password) {
           return {
             id: user.id,
             name: user.name,
             email: user.email,
-            hashedPassword: user.hashed_password,
+            role: user.role,
+            hashedPassword: user.hashedPassword,
           };
         }
         return null;
       },
     }),
   ],
+  jwt: {
+    secret: process.env.NEXTAUTH_SECRET,
+    maxAge: 30 * 24 * 60 * 60,
+  },
   session: {
     strategy: 'jwt',
   },
@@ -70,6 +53,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
@@ -78,6 +62,7 @@ export const authOptions: NextAuthOptions = {
         session.user = {
           ...(session.user || {}),
           id: token.id as string,
+          role: token.role as string,
         };
       }
       return session;
