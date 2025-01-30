@@ -29,7 +29,7 @@ const Input = <T extends FieldValues>({
         id={String(id)}
         disabled={disabled}
         {...register(id, { required })}
-        placeholder=''
+        placeholder=' '
         type={type}
         className={`
             w-full
