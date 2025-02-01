@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from './auth/[...nextauth]';
 import getCurrentUser from '@/lib/getCurrentUser';
 import mySQLAdapter from '@/lib/mysqlAdapter';
+import getProducts from '@/lib/getProducts';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
@@ -43,8 +44,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Error creating product:', error);
       return res.status(500).json({ error: 'Internal Server Error.' });
     }
+  } else if (req.method === 'GET') {
+    const params = req.query;
+    try {
+      const products = await getProducts(params);
+      return res.status(200).json(products);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return res.status(500).json({ error: 'Internal Server Error.' });
+    }
   } else {
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['POST', 'GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 }

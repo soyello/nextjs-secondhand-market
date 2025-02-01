@@ -1,27 +1,43 @@
 import { AdapterSession, AdapterUser } from 'next-auth/adapters';
 import pool from './db';
-import { SessionRow, UserRow } from '@/helper/row';
-import { mapToAdapterSession, mapToAdapterUser } from '@/helper/mapper';
+import { ProductRow, SessionRow, UserRow } from '@/helper/row';
+import { mapToAdapterSession, mapToAdapterUser, mapToProducts } from '@/helper/mapper';
 import { ResultSetHeader } from 'mysql2';
+import { Product } from '@/helper/type';
+import { buildWhereClause } from '@/helper/buildWhereClause';
 
 type Nullable<T> = {
   [P in keyof T]: T[P] | null;
 };
 
-interface Product {
-  id: string;
-  title: string;
-  description: string;
-  imageSrc: string;
-  category: string;
-  latitude: number;
-  longitude: number;
-  price: number;
-  userId: string;
-}
-
 const mySQLAdapter = {
-  async createProduct(product: Omit<Product, 'id'>): Promise<Product> {
+  async getProducts(query: Record<string, any> = {}): Promise<Product[]> {
+    const { where, values } = buildWhereClause(query, ['category', 'latitude', 'longitude']);
+    const sql = `
+        SELECT
+          id,
+          title,
+          description,
+          image_src,
+          category,
+          latitude,
+          longitude,
+          price,
+          user_id,
+          created_at,
+          updated_at
+        FROM products
+        ${where}
+        ORDER BY created_at DESC`;
+    try {
+      const [rows] = await pool.query<ProductRow[]>(sql, values);
+      return mapToProducts(rows);
+    } catch (error) {
+      console.error('Database query error:', { query, sql, values, error });
+      throw new Error('Error fetching products form the database');
+    }
+  },
+  async createProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
     const { title, description, imageSrc, category, latitude, longitude, price, userId } = product;
     if (!title || !description || !imageSrc || !category || !latitude || !longitude || !price || !userId) {
       throw new Error('All product fields are required.');
@@ -41,6 +57,8 @@ const mySQLAdapter = {
         longitude,
         price,
         userId,
+        createdAt: new Date(),
+        updatedAt: null,
       };
     } catch (error) {
       console.error('Error creating product:', error);
