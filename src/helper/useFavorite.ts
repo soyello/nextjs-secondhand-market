@@ -2,6 +2,7 @@ import axios from 'axios';
 import { AdapterUser } from 'next-auth/adapters';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 
 interface UserFavorites {
   productId: string;
@@ -22,7 +23,7 @@ const useFavorite = ({ productId, currentUser }: UserFavorites) => {
     e.stopPropagation();
 
     if (!currentUser) {
-      console.log('No current user, redirecting to login.');
+      toast.warn('먼저 로그인 하세용.');
       router.push('/auth/login');
       return;
     }
@@ -34,8 +35,10 @@ const useFavorite = ({ productId, currentUser }: UserFavorites) => {
         await axios.post(`/api/favorites/${productId}`);
       }
       setHasFavorite(!hasFavorite);
+      toast.success('성공했습니다.');
     } catch (error) {
       console.error('Error toggling favorite status:', error);
+      toast.error('실패했습니다.');
     }
   };
 

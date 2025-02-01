@@ -1,4 +1,5 @@
 import NavBar from '@/components/NavBar';
+import ToastProvider from '@/components/ToastProvider';
 import '@/styles/globals.css';
 import { SessionProvider } from 'next-auth/react';
 import type { AppProps } from 'next/app';
@@ -14,6 +15,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
     <SessionProvider session={session}>
       <div className={lato.className}>
         <NavBar />
+        <ToastProvider />
         <Component {...pageProps} isKakaoLoaded={isKakaoLoaded} />
         <Script
           src='//dapi.kakao.com/v2/maps/sdk.js?appkey=9268d3bcf6b80dc4ae2dd0de7e26caab&libraries=services,clusterer&autoload=false'
