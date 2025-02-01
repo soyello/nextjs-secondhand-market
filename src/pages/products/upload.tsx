@@ -5,10 +5,16 @@ import ImageUpload from '@/components/ImageUpload';
 import Input from '@/components/Input';
 import { categories } from '@/components/categories/Categories';
 import CategoryInput from '@/components/categories/CategoryInput';
-import React, { useState } from 'react';
+import axios from 'axios';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
+import React, { useEffect, useState } from 'react';
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
 
-const ProductUploadPage = () => {
+const KakaoMap = dynamic(() => import('../../components/KakaoMap'), { ssr: false });
+
+const ProductUploadPage = ({ isKakaoLoaded }: { isKakaoLoaded: boolean }) => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -17,31 +23,45 @@ const ProductUploadPage = () => {
     setValue,
     watch,
     formState: { errors },
-    reset,
   } = useForm<FieldValues>({
     defaultValues: {
       title: '',
       description: '',
       category: '',
-      latitude: 33.5563,
-      longitude: 126.79581,
+      latitude: 37.5665,
+      longitude: 126.978,
       imageSrc: '',
       price: 10000,
     },
   });
   const imageSrc = watch('imageSrc');
   const category = watch('category');
+  const latitude = watch('latitude');
+  const longitude = watch('longitude');
 
-  const onSubmit: SubmitHandler<FieldValues> = (data) => {};
-  const setCustomValue = (id: string, value: string) => {
-    setValue(id, value);
+  const handleMapClick = (lat: number, lng: number) => {
+    setValue('latitude', lat);
+    setValue('longitude', lng);
   };
+
+  const onSubmit: SubmitHandler<FieldValues> = (data) => {
+    setIsLoading(true);
+    axios
+      .post('/api/products', data)
+      .then((response) => {
+        router.push(`/products/${response.data.id}`);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   return (
     <Container>
       <div className='max-w-screen-lg mx-auto'>
         <form className='flex flex-col gap-8' onSubmit={handleSubmit(onSubmit)}>
           <Heading title='Product Upload' subtitle='upload your product' />
-          <ImageUpload onChange={(value) => setCustomValue('imageSrc', value)} value={imageSrc} />
+          <ImageUpload onChange={(value) => setValue('imageSrc', value)} value={imageSrc} />
           <Input id='title' label='Title' disabled={isLoading} register={register} errors={errors} required />
           <hr />
           <Input
@@ -67,7 +87,7 @@ const ProductUploadPage = () => {
             {categories.map((item) => (
               <div key={item.label} className='col-spans-1'>
                 <CategoryInput
-                  onClick={() => setCustomValue('category', item.path)}
+                  onClick={() => setValue('category', item.path)}
                   selected={category === item.path}
                   label={item.label}
                   icon={item.icon}
@@ -76,7 +96,11 @@ const ProductUploadPage = () => {
             ))}
           </div>
           <hr />
-          KakaoMap
+          {isKakaoLoaded ? (
+            <KakaoMap latitude={latitude} longitude={longitude} onClick={handleMapClick} detailPage={false} />
+          ) : (
+            <p>Loading kakao Maps</p>
+          )}
           <Button label='상품 생성하기' />
         </form>
       </div>
