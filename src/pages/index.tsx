@@ -1,26 +1,34 @@
+import Container from '@/components/Container';
+import EmptyState from '@/components/EmptyState';
+import FloatingButton from '@/components/FloatingButton';
+import ProductCard from '@/components/product/ProductCard';
 import { Product } from '@/helper/type';
 import axios from 'axios';
 import { GetServerSideProps } from 'next';
+import { AdapterUser } from 'next-auth/adapters';
 
 interface HomeProps {
   products: Product[];
+  currentUser: AdapterUser | null;
 }
 
-export default function Home({ products }: HomeProps) {
+export default function Home({ products, currentUser }: HomeProps) {
   console.log(products);
   return (
-    <>
-      <h1>누구나 볼 수 있는 페이지입니다.</h1>
-      {products.length > 0 ? (
-        <ul>
-          {products.map((product) => (
-            <li key={product.id}>{product.title}</li>
-          ))}
-        </ul>
+    <Container>
+      {products.length === 0 ? (
+        <EmptyState />
       ) : (
-        <p>제품이 없습니다.</p>
+        <>
+          <div className='grid grid-cols-1 gap-8 pt-12 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6'>
+            {products.map((product) => (
+              <ProductCard currentUser={currentUser} key={product.id} data={product} />
+            ))}
+          </div>
+        </>
       )}
-    </>
+      <FloatingButton href='/products/upload'>+</FloatingButton>
+    </Container>
   );
 }
 export const getServerSideProps: GetServerSideProps = async (context) => {
