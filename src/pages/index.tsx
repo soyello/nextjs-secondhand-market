@@ -13,7 +13,6 @@ interface HomeProps {
 }
 
 export default function Home({ products, currentUser }: HomeProps) {
-  console.log(products);
   return (
     <Container>
       {products.length === 0 ? (
@@ -34,14 +33,21 @@ export default function Home({ products, currentUser }: HomeProps) {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     const { query } = context;
-
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+    const { data: currentUser } = await axios.get(`${baseUrl}/api/currentUser`, {
+      headers: {
+        cookie: context.req.headers.cookie || '',
+      },
+    });
+
     const { data: products } = await axios.get(`${baseUrl}/api/products?${queryString}`);
 
     return {
       props: {
         products,
+        currentUser,
       },
     };
   } catch (error) {
@@ -49,6 +55,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return {
       props: {
         products: [],
+        currentUser: null,
       },
     };
   }

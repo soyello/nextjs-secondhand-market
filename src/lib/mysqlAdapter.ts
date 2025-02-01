@@ -71,7 +71,7 @@ const mySQLAdapter = {
     }
     try {
       const [rows] = await pool.query<UserRow[]>(
-        'SELECT id, name, email, user_type, created_at, updated_at, hashed_password FROM users WHERE email=?',
+        'SELECT id, name, email, user_type, favorite_ids, created_at, updated_at, hashed_password FROM users WHERE email=?',
         [email]
       );
       return rows[0] ? mapToAdapterUser(rows[0]) : null;
@@ -81,7 +81,7 @@ const mySQLAdapter = {
     }
   },
   async createUser(
-    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role' | 'createdAt' | 'updatedAt'>
+    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role' | 'createdAt' | 'updatedAt' | 'favoriteIds'>
   ): Promise<Omit<AdapterUser, 'hashedPassword'>> {
     const { name, email, hashedPassword } = user;
     const [result] = await pool.query<ResultSetHeader>(
@@ -97,31 +97,37 @@ const mySQLAdapter = {
       updatedAt: null,
       image: null,
       emailVerified: null,
+      favoriteIds: [],
     };
   },
-  async updateUser(user: Nullable<AdapterUser> & { email: string }): Promise<AdapterUser> {
-    const { email, name, image, role } = user;
+  async updateUser(user: Partial<Nullable<AdapterUser>> & { email: string }): Promise<AdapterUser> {
+    const { email, name, image, role, favoriteIds } = user;
     if (!email) {
       throw new Error('User Email is required for updating');
     }
+
+    const updates: Record<string, any> = {
+      name,
+      image,
+      user_type: role,
+      favorite_ids: favoriteIds ? JSON.stringify(favoriteIds) : null,
+    };
+    const keys = Object.keys(updates).filter((key) => updates[key as keyof typeof updates] !== undefined);
+
+    if (keys.length === 0) {
+      throw new Error('No fields to update. Provide at least one field.');
+    }
+
+    const fields = keys.map((key) => `${key}=?`).join(', ');
+    const values = keys.map((key) => updates[key as keyof typeof updates]);
     try {
-      const updates = { name, image, user_type: role };
-      const keys = Object.keys(updates).filter((key) => updates[key as keyof typeof updates] !== undefined);
-
-      if (keys.length === 0) {
-        throw new Error('No fields to update. Provide at least one field.');
-      }
-
-      const fields = keys.map((key) => `${key}=?`).join(', ');
-      const values = keys.map((key) => updates[key as keyof typeof updates]);
-
       await pool.query(`UPDATE users SET ${fields} WHERE email=?`, [...values, email]);
 
       const [rows] = await pool.query<UserRow[]>(
-        'SELECT email, name, image, user_type, created_at, updated_at FROM users WHERE email=?',
+        'SELECT email, name, image, user_type, favorite_ids, created_at, updated_at FROM users WHERE email=?',
         [email]
       );
-      if (!rows[0]) {
+      if (!rows.length) {
         throw new Error(`User with Email: ${email} not found after update.`);
       }
       return mapToAdapterUser(rows[0]);

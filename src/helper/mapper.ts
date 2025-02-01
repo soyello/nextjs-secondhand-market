@@ -16,6 +16,12 @@ export const mapToAdapterUser = (row: UserRow): AdapterUser => ({
   hashedPassword: row.hashed_password,
   emailVerified: row.email_verified ?? null,
   role: row.user_type,
+  favoriteIds:
+    typeof row.favorite_ids === 'string'
+      ? JSON.parse(row.favorite_ids)
+      : Array.isArray(row.favorite_ids)
+      ? row.favorite_ids
+      : [],
 });
 
 export const mapToAdapterSession = (row: SessionRow): AdapterSession => ({

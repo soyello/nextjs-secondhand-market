@@ -6,6 +6,7 @@ declare module 'next-auth' {
   }
   interface User {
     role: string;
+    favoriteIds: string[];
     createdAt: Date;
     updatedAt: Date | null;
     hashedPassword?: string;

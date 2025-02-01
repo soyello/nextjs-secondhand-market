@@ -10,9 +10,10 @@ export interface UserRow extends BaseRow {
   name: string;
   email: string;
   image: string | null;
-  hashed_password: string;
+  hashed_password?: string;
   email_verified: Date | null;
   user_type: string;
+  favorite_ids: string[];
 }
 
 export interface SessionRow extends RowDataPacket {
