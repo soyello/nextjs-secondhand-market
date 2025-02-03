@@ -2,7 +2,7 @@ import { AdapterSession, AdapterUser } from 'next-auth/adapters';
 import pool from './db';
 import { ProductRow, SessionRow, UserRow } from '@/helper/row';
 import { mapToAdapterSession, mapToAdapterUser, mapToProducts } from '@/helper/mapper';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { Product } from '@/helper/type';
 import { buildWhereClause } from '@/helper/buildWhereClause';
 
@@ -10,9 +10,30 @@ type Nullable<T> = {
   [P in keyof T]: T[P] | null;
 };
 
+interface TotalItemRow extends RowDataPacket {
+  totalItems: number;
+}
+
 const mySQLAdapter = {
-  async getProducts(query: Record<string, any> = {}): Promise<Product[]> {
+  async getProducts(
+    query: Record<string, any> = {},
+    page: number,
+    itemsPerPage: number
+  ): Promise<{ data: Product[]; totalItems: number }> {
     const { where, values } = buildWhereClause(query, ['category', 'latitude', 'longitude']);
+
+    const countSQL = `SELECT COUNT(*) as totalItems FROM products ${where}`;
+    let totalItems = 0;
+
+    try {
+      const [countResult] = await pool.query<TotalItemRow[]>(countSQL, values);
+      totalItems = (countResult && countResult[0]?.totalItems) || 0;
+    } catch (error) {
+      console.error('Error fetching total items:', error);
+      throw new Error('Error fetching total item count from the database.');
+    }
+    const offset = (page - 1) * itemsPerPage;
+
     const sql = `
         SELECT
           id,
@@ -28,10 +49,13 @@ const mySQLAdapter = {
           updated_at
         FROM products
         ${where}
-        ORDER BY created_at DESC`;
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        `;
+    const paginationValues = [...values, itemsPerPage, offset];
     try {
-      const [rows] = await pool.query<ProductRow[]>(sql, values);
-      return mapToProducts(rows);
+      const [rows] = await pool.query<ProductRow[]>(sql, paginationValues);
+      return { data: mapToProducts(rows), totalItems };
     } catch (error) {
       console.error('Database query error:', { query, sql, values, error });
       throw new Error('Error fetching products form the database');

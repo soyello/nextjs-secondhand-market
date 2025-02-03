@@ -46,6 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'GET') {
     const params = req.query;
+    console.log('Received query params:', params);
     try {
       const products = await getProducts(params);
       return res.status(200).json(products);
